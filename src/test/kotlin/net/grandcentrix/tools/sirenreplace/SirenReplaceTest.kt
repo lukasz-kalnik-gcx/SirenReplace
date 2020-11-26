@@ -11,9 +11,9 @@ import kotlinx.serialization.json.JsonObject
  */
 class SirenReplaceTest : FreeSpec({
 
-    "SirenReplace on file 1 should move `light type` entity to `features`" {
-        val inputJsonObject = Json.decodeFromString<JsonObject>(file1)
-        val outputJsonObject = Json.decodeFromString<JsonObject>(file2)
+    "SirenReplace on file with light type should move `light type` entity to `features`" {
+        val inputJsonObject = Json.decodeFromString<JsonObject>(fileWithLightType)
+        val outputJsonObject = Json.decodeFromString<JsonObject>(fileAfterConversion)
 
         sirenMoveObject(
             inputJsonObject = inputJsonObject,
@@ -23,9 +23,21 @@ class SirenReplaceTest : FreeSpec({
             targetObjectKey = "features"
         ) shouldBe outputJsonObject
     }
+
+    "SirenReplace on file without light type should return null" {
+        val inputJsonObject = Json.decodeFromString<JsonObject>(fileAfterConversion)
+
+        sirenMoveObject(
+            inputJsonObject = inputJsonObject,
+            sourceTopLevelKey = "entities",
+            sourceClass = listOf("light", "type"),
+            sourceObjectKey = "properties",
+            targetObjectKey = "features"
+        ) shouldBe null
+    }
 })
 
-private const val file1 = """
+private const val fileWithLightType = """
 {
   "actions": [
     {
@@ -109,7 +121,7 @@ private const val file1 = """
 }
 """
 
-private const val file2 = """
+private const val fileAfterConversion = """
 {
   "actions": [
     {
