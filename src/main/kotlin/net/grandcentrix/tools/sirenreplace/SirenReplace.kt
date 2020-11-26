@@ -1,6 +1,7 @@
 package net.grandcentrix.tools.sirenreplace
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -29,24 +30,45 @@ fun sirenMoveObject(
     sourceObjectKey: String,
     targetObjectKey: String
 ): JsonObject? {
-    val topLevelArray = (inputJsonObject[sourceTopLevelKey] as JsonArray?)
+    // We always just fail returning null if we cannot find some required Json element
+    val topLevelArray = (inputJsonObject[sourceTopLevelKey] as JsonArray?) ?: return null
 
     // We have to wrap the sourceClass in a JsonArray containing JsonPrimitives
-    // to be able to later compare it with the parsed sirenClass
+    // to be able to compare it with the found sirenClass
     val searchedSourceClass = JsonArray(sourceClass.map { JsonPrimitive(it) })
-    val sourceParentObject = topLevelArray?.find {
+    val sourceParentObject = topLevelArray.find {
         val sirenClass = (it as JsonObject)[SIREN_CLASS]
         (sirenClass as JsonArray?)?.containsAll(searchedSourceClass) == true
-    }
-    sourceParentObject as JsonObject?
+    } ?: return null
+
+    // First convert the inputJsonObject so that we can modify it
+    val outputMutableMap = inputJsonObject.toMutableMap()
+    // Create a copy of topLevelArray with the object with searchedSourceClass removed
+    val topLevelArrayModifiedList = topLevelArray.mapNotNull {
+        val sirenClass = (it as JsonObject)[SIREN_CLASS]
+        if ((sirenClass as JsonArray?)?.containsAll(searchedSourceClass) == true) {
+            null
+        } else {
+            it
+        }
+    }.toList()
+    // Now replace the top level array in the outputMutableMap
+    val topLevelArrayModified = JsonArray(topLevelArrayModifiedList)
+    outputMutableMap[sourceTopLevelKey] = topLevelArrayModified
+
+    sourceParentObject as JsonObject
     // If we didn't find the source object then just return null
-    val sourceObject = sourceParentObject?.get(sourceObjectKey) ?: return null
+    val sourceObject = sourceParentObject.get(sourceObjectKey) ?: return null
 
-    // Move the sourceObject to top level `properties` object
-    // using targetObjectKey as its key
-    val topLevelProperties = (inputJsonObject[SIREN_PROPERTIES] as JsonObject?)
-    topLevelProperties?.toMutableMap()?.set(targetObjectKey, sourceObject)
+    // Find top level properties in the inputJsonObject, if not found return null
+    val topLevelProperties = (inputJsonObject[SIREN_PROPERTIES] as JsonObject?) ?: return null
+    // Add sourceObject to top level properties
+    val topLevelPropertiesModified: Map<String, JsonElement> = topLevelProperties.toMutableMap()
+        .apply { set(targetObjectKey, sourceObject) }
+        .toMap()
+    // Now add the modified topLevelProperties to the outputMutableMap
+    val topLevelPropertiesModifiedJsonObject = JsonObject(topLevelPropertiesModified)
+    outputMutableMap[SIREN_PROPERTIES] = topLevelPropertiesModifiedJsonObject
 
-    return inputJsonObject
+    return JsonObject(outputMutableMap.toMap())
 }
-
