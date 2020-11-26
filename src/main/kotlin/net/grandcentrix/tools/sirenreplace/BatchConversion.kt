@@ -4,8 +4,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import java.nio.file.Files
-import java.nio.file.Paths
+import java.io.File
 
 fun main(args: Array<String>) {
     batchSirenMoveObject(
@@ -24,11 +23,10 @@ fun batchSirenMoveObject(
     sourceObjectKey: String,
     targetObjectKey: String
 ) {
-    Files.list(Paths.get(path))
-        .filter(Files::isRegularFile)
-        .filter { it.endsWith(".json") }
-        .forEach { filePath ->
-            val reader = Files.newBufferedReader(filePath)
+    val files = File(path).listFiles() ?: return
+    files.filter { it.path.endsWith(".json") }
+        .forEach { file ->
+            val reader = file.bufferedReader()
             val fileContents = reader.use { it.readText() }
             val inputJsonObject = Json.decodeFromString<JsonObject>(fileContents)
 
@@ -43,7 +41,7 @@ fun batchSirenMoveObject(
 
             if (modifiedJsonObject != null) {
                 val modifiedFileContents = Json.encodeToString(modifiedJsonObject)
-                val writer = Files.newBufferedWriter(filePath)
+                val writer = file.bufferedWriter()
                 writer.use { it.write(modifiedFileContents) }
             }
         }
