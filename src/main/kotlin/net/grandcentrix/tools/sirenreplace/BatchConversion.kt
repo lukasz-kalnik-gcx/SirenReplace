@@ -39,6 +39,7 @@ fun batchSirenMoveObject(
                 targetObjectKey
             )
 
+            // If the modifiedJsonObject was null then there was nothing to convert -> skip it
             if (modifiedJsonObject != null) {
                 val modifiedFileContents = Json.encodeToString(modifiedJsonObject)
                 val writer = file.bufferedWriter()
